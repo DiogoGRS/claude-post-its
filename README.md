@@ -2,7 +2,9 @@
 
 Um mod para o [Claude Code](https://claude.com/claude-code): painel lateral de post-its no terminal.
 
-![O painel de post-its, com post-its de exemplo](docs/painel.png)
+![O Claude Code com três agentes rodando na conversa e o painel de post-its ao lado](docs/painel.png)
+
+Enquanto os agentes trabalham na conversa, o painel ao lado guarda a tarefa atual, com uma subtarefa por frente, e as próximas que vêm depois.
 
 - Crie post-its de texto; cada um ganha uma cor (laranja, azul, amarelo, verde, ciano, roxo, em ciclo).
 - Subtarefas com checkbox dentro de cada post-it, editáveis (`(✎)`) e removíveis (`(✕)`).
