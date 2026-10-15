@@ -2,6 +2,8 @@
 
 Um mod para o [Claude Code](https://claude.com/claude-code): painel lateral de post-its no terminal.
 
+![O painel de post-its, com post-its de exemplo](docs/painel.png)
+
 - Crie post-its de texto; cada um ganha uma cor (laranja, azul, amarelo, verde, ciano, roxo, em ciclo).
 - Subtarefas com checkbox dentro de cada post-it, editáveis (`(✎)`) e removíveis (`(✕)`).
 - Marque como concluído e consulte o histórico na aba **Concluídos**, com a data.
@@ -40,3 +42,7 @@ claude plugin test .             # roda tests/*.test.ts
 ```
 
 Os tipos da API (`.claude-plugin/types/`) são gerados pelo Claude Code ao carregar o mod; depois disso `tsc -p .` checa os tipos.
+
+## Licença
+
+[MIT](LICENSE)
