@@ -1,0 +1,9 @@
+{
+  "name": "post-its",
+  "version": "0.1.0",
+  "description": "Painel lateral de post-its: crie, conclua e consulte os concluídos",
+  "author": {
+    "name": "DiogoGRS"
+  },
+  "types": "./types/index.d.ts"
+}

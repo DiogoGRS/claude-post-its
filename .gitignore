@@ -1,0 +1,9 @@
+# Gerado pelo Claude Code ao carregar o mod (tipos da API e das ferramentas desta máquina)
+.claude-plugin/types/
+
+# Nada local
+.DS_Store
+node_modules/
+*.log
+.env
+.env.*

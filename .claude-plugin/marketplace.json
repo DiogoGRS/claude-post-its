@@ -1,0 +1,13 @@
+{
+  "name": "claude-post-its",
+  "description": "Painel lateral de post-its para o Claude Code",
+  "owner": {
+    "name": "DiogoGRS"
+  },
+  "plugins": [
+    {
+      "name": "post-its",
+      "source": "./"
+    }
+  ]
+}
