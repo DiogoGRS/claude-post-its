@@ -74,16 +74,26 @@ const colorAt = (count: number): ColorName => COLOR_ORDER[count % COLOR_ORDER.le
 
 const colorOf = (note: Note) => PALETTE[isColorName(note.color) ? note.color : 'laranja']
 
+// Cada pasta tem o seu quadro: os post-its e o contador de cores ficam no store sob a pasta onde a
+// sessão começou. Um /cd no meio da sessão não troca de quadro; a próxima sessão naquela pasta, sim.
+let folder: string | undefined
+
+async function boardKey($: EngineInterface, name: 'notes' | 'colorCounter') {
+  folder ??= await $.session.root()
+
+  return `${name}:${folder}`
+}
+
 // O contador só sobe (apagar um post-it não o faz voltar) e fica no store, entre sessões.
 async function readColorCounter($: EngineInterface) {
-  const stored = await $.store.get('colorCounter')
+  const stored = await $.store.get(await boardKey($, 'colorCounter'))
 
   return typeof stored === 'number' ? stored : 0
 }
 
 async function nextColor($: EngineInterface): Promise<ColorName> {
   const count = await readColorCounter($)
-  await $.store.set('colorCounter', count + 1)
+  await $.store.set(await boardKey($, 'colorCounter'), count + 1)
 
   return colorAt(count)
 }
@@ -92,7 +102,7 @@ async function nextColor($: EngineInterface): Promise<ColorName> {
 // e no store do plugin (sobrevive entre sessões).
 async function change($: EngineInterface, fn: (list: Note[]) => Note[]) {
   const saved = await update($, notes, list => fn(list.map(withSubtasks)))
-  await $.store.set('notes', saved)
+  await $.store.set(await boardKey($, 'notes'), saved)
 }
 
 async function add($: EngineInterface, text: string) {
@@ -253,7 +263,8 @@ function keepDocked(
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    const saved = await $.store.get('notes')
+    folder = await $.session.root()
+    const saved = await $.store.get(await boardKey($, 'notes'))
     let list = Array.isArray(saved)
       ? saved.map(toNote).filter((note): note is Note => note !== undefined)
       : []
@@ -264,14 +275,22 @@ export const register: Register = on => {
       let count = await readColorCounter($)
       const colors = new Map(uncolored.map(note => [note.id, colorAt(count++)]))
       list = list.map(note => ({ ...note, color: colors.get(note.id) ?? note.color }))
-      await $.store.set('colorCounter', count)
-      await $.store.set('notes', list)
+      await $.store.set(await boardKey($, 'colorCounter'), count)
+      await $.store.set(await boardKey($, 'notes'), list)
     }
 
     await update($, notes, () => list)
 
-    // Restos das versões anteriores do dimensionamento.
-    for (const key of ['widthColumns', 'paneColumns', 'widthDebug', 'widthPct', 'paneSize']) {
+    // Restos das versões anteriores: o dimensionamento e o quadro único, de antes de um por pasta.
+    for (const key of [
+      'widthColumns',
+      'paneColumns',
+      'widthDebug',
+      'widthPct',
+      'paneSize',
+      'notes',
+      'colorCounter',
+    ]) {
       await $.store.delete(key)
     }
 

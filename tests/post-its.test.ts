@@ -3,9 +3,15 @@ import type { RenderViewport } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 import { expect, mock, test } from 'claude-code/testing'
 
-// Store em memória que o teste consegue ler (o mock.store do kit não expõe o conteúdo).
-function memoryStore(on: On) {
+const FOLDER = '/projetos/fiscal'
+const NOTES = `notes:${FOLDER}`
+const COUNTER = `colorCounter:${FOLDER}`
+
+// Store em memória que o teste consegue ler (o mock.store do kit não expõe o conteúdo), e a pasta
+// onde a sessão está, que decide o quadro.
+function memoryStore(on: On, root: () => string = () => FOLDER) {
   const saved = new Map<string, unknown>()
+  on('session.root', () => ({ value: root() }))
   on('store.get', ($, e) => ({ value: saved.get(e.key) }))
   on('store.set', ($, e) => {
     saved.set(e.key, JSON.parse(JSON.stringify(e.value)))
@@ -53,7 +59,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect((await ui.find({ key: 'tab:open' }))?.text).toBe('Abertos (1)')
     expect(await ui.find({ type: 'Text', text: 'revisar PR do fiscal' })).toBeDefined()
 
-    const stored = saved.get('notes')
+    const stored = saved.get(NOTES)
     expect(stored).toMatchObject([{ text: 'revisar PR do fiscal', doneAt: null }])
 
     const doneButton = (await ui.findAll({ type: 'Button' })).find(one =>
@@ -68,7 +74,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     await ui.press({ key: 'tab:done' })
     expect(await ui.find({ type: 'Text', text: 'revisar PR do fiscal' })).toBeDefined()
-    expect(saved.get('notes')).toMatchObject([{ doneAt: Date.UTC(2026, 9, 15, 12, 0) }])
+    expect(saved.get(NOTES)).toMatchObject([{ doneAt: Date.UTC(2026, 9, 15, 12, 0) }])
 
     const reopenButton = (await ui.findAll({ type: 'Button' })).find(one =>
       one.key?.startsWith('reopen:'),
@@ -100,7 +106,7 @@ test('apaga um post-it e tira do store', async ($, on) => {
   await ui.press({ key: removeButton?.key ?? '' })
 
   expect((await ui.find({ key: 'tab:open' }))?.text).toBe('Abertos (0)')
-  expect(saved.get('notes')).toEqual([])
+  expect(saved.get(NOTES)).toEqual([])
 
   await ui.unmount()
 })
@@ -154,13 +160,13 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const checkKey = await buttonKey(ui, `check:${noteId}:`)
     expect((await ui.find({ key: checkKey }))?.text).toBe('[ ]')
     expect(await ui.find({ type: 'Text', text: 'escrever o teste' })).toBeDefined()
-    expect(saved.get('notes')).toMatchObject([
+    expect(saved.get(NOTES)).toMatchObject([
       { text: 'fechar PR do fiscal', subtasks: [{ text: 'escrever o teste', isDone: false }] },
     ])
 
     await ui.press({ key: checkKey })
     expect((await ui.find({ key: checkKey }))?.text).toBe('[✓]')
-    expect(saved.get('notes')).toMatchObject([{ subtasks: [{ isDone: true }] }])
+    expect(saved.get(NOTES)).toMatchObject([{ subtasks: [{ isDone: true }] }])
 
     await ui.press({ key: checkKey })
     expect((await ui.find({ key: checkKey }))?.text).toBe('[ ]')
@@ -168,7 +174,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await ui.press({ key: `addsub:${noteId}` })
     await ui.input({ key: `subtask:${noteId}`, text: '   ' })
     expect(await ui.find({ key: `subtask:${noteId}` })).toBeUndefined()
-    expect(saved.get('notes')).toMatchObject([{ subtasks: [{ text: 'escrever o teste' }] }])
+    expect(saved.get(NOTES)).toMatchObject([{ subtasks: [{ text: 'escrever o teste' }] }])
 
     await ui.unmount()
   })
@@ -204,7 +210,7 @@ test('subtarefas aparecem só para leitura nos concluídos', async ($, on) => {
 
 test('post-its gravados antes das subtarefas carregam com a lista vazia', async ($, on) => {
   const saved = memoryStore(on)
-  saved.set('notes', [
+  saved.set(NOTES, [
     { id: 'velho', text: 'post-it antigo', createdAt: 0, doneAt: null },
     { id: 'quebrado', text: 42 },
   ])
@@ -278,7 +284,7 @@ test('✕ apaga só a subtarefa escolhida', async ($, on) => {
 
   expect(await ui.find({ type: 'Text', text: 'gerar build' })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: 'subir tag' })).toBeDefined()
-  expect(saved.get('notes')).toMatchObject([{ text: 'release', subtasks: [{ text: 'subir tag' }] }])
+  expect(saved.get(NOTES)).toMatchObject([{ text: 'release', subtasks: [{ text: 'subir tag' }] }])
 
   await ui.unmount()
 })
@@ -321,7 +327,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await ui.input({ key: `editsub:${subKey}`, text: '  gerar build de produção  ' })
     expect(await ui.find({ key: `editsub:${subKey}` })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: 'gerar build de produção' })).toBeDefined()
-    expect(saved.get('notes')).toMatchObject([{ subtasks: [{ text: 'gerar build de produção' }] }])
+    expect(saved.get(NOTES)).toMatchObject([{ subtasks: [{ text: 'gerar build de produção' }] }])
 
     await ui.unmount()
   })
@@ -350,7 +356,7 @@ test('Enter vazio ou (✎) de novo cancela a edição e mantém o texto', async 
   expect(await ui.find({ key: `editsub:${subKey}` })).toBeUndefined()
 
   expect(await ui.find({ type: 'Text', text: 'gerar build' })).toBeDefined()
-  expect(saved.get('notes')).toMatchObject([{ subtasks: [{ text: 'gerar build' }] }])
+  expect(saved.get(NOTES)).toMatchObject([{ subtasks: [{ text: 'gerar build' }] }])
 
   await ui.unmount()
 })
@@ -402,10 +408,10 @@ test('cores seguem o resto do contador: laranja, azul, amarelo, verde, ciano, ro
 
   for (const n of [1, 2, 3, 4, 5, 6, 7]) await ui.input({ key: 'new', text: `post-it ${n}` })
 
-  const stored = saved.get('notes') as { id: string; color: string }[]
+  const stored = saved.get(NOTES) as { id: string; color: string }[]
   const expected = ['laranja', 'azul', 'amarelo', 'verde', 'ciano', 'roxo', 'laranja'] as const
   expect(stored.map(note => note.color)).toEqual([...expected])
-  expect(saved.get('colorCounter')).toBe(7)
+  expect(saved.get(COUNTER)).toBe(7)
 
   for (const [i, note] of stored.entries()) {
     const card = await ui.find({ key: `note:${note.id}` })
@@ -429,11 +435,11 @@ test('apagar um post-it não faz o contador voltar', async ($, on) => {
 
   await ui.input({ key: 'new', text: 'primeiro' })
   await ui.input({ key: 'new', text: 'segundo' })
-  const second = (saved.get('notes') as { id: string }[])[1]
+  const second = (saved.get(NOTES) as { id: string }[])[1]
   await ui.press({ key: `remove:${second?.id}` })
   await ui.input({ key: 'new', text: 'terceiro' })
 
-  expect((saved.get('notes') as { color: string }[]).map(note => note.color)).toEqual([
+  expect((saved.get(NOTES) as { color: string }[]).map(note => note.color)).toEqual([
     'laranja',
     'amarelo',
   ])
@@ -444,7 +450,7 @@ test('apagar um post-it não faz o contador voltar', async ($, on) => {
 test('post-its sem cor ganham cores pela ordem de criação e o contador continua', async ($, on) => {
   const saved = memoryStore(on)
   mock.clock(on, { now: 100 })
-  saved.set('notes', [
+  saved.set(NOTES, [
     { id: 'novo', text: 'criado depois', createdAt: 50, doneAt: null, subtasks: [] },
     { id: 'velho', text: 'criado antes', createdAt: 10, doneAt: null, subtasks: [] },
     { id: 'pintado', text: 'já tinha cor', createdAt: 20, doneAt: null, subtasks: [], color: 'roxo' },
@@ -454,12 +460,12 @@ test('post-its sem cor ganham cores pela ordem de criação e o contador continu
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  expect(saved.get('notes')).toMatchObject([
+  expect(saved.get(NOTES)).toMatchObject([
     { id: 'novo', color: 'azul' },
     { id: 'velho', color: 'laranja' },
     { id: 'pintado', color: 'roxo' },
   ])
-  expect(saved.get('colorCounter')).toBe(2)
+  expect(saved.get(COUNTER)).toBe(2)
 
   const ui = await $.ui.mount({
     plugin: 'post-its',
@@ -469,7 +475,71 @@ test('post-its sem cor ganham cores pela ordem de criação e o contador continu
     props: PANE,
   })
   await ui.input({ key: 'new', text: 'mais um' })
-  expect((saved.get('notes') as { color: string }[]).at(-1)?.color).toBe('amarelo')
+  expect((saved.get(NOTES) as { color: string }[]).at(-1)?.color).toBe('amarelo')
+
+  await ui.unmount()
+})
+
+test('cada pasta tem o seu quadro e o seu contador de cores', async ($, on) => {
+  let root = FOLDER
+  const saved = memoryStore(on, () => root)
+  mock.clock(on, { now: 0 })
+  on('command.register', ($, e) => ({ value: { command: e.name } }))
+  on('session.start', () => ({ cwd: root }))
+
+  // Começa uma sessão na pasta, cria os post-its e devolve o rótulo da aba de abertos.
+  async function sessionIn(dir: string, texts: string[]) {
+    root = dir
+    await $.session.start({ cwd: dir, surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount({
+      plugin: 'post-its',
+      surface: 'terminal',
+      component: 'Pane',
+      requestId: 'post-its',
+      props: PANE,
+    })
+    for (const text of texts) await ui.input({ key: 'new', text })
+    const label = (await ui.find({ key: 'tab:open' }))?.text
+    await ui.unmount()
+
+    return label
+  }
+
+  expect(await sessionIn(FOLDER, ['revisar PR', 'subir tag'])).toBe('Abertos (2)')
+  expect(await sessionIn('/projetos/site', ['trocar logo'])).toBe('Abertos (1)')
+  expect(await sessionIn(FOLDER, [])).toBe('Abertos (2)')
+
+  expect(saved.get(NOTES)).toMatchObject([
+    { text: 'revisar PR', color: 'laranja' },
+    { text: 'subir tag', color: 'azul' },
+  ])
+  expect(saved.get(COUNTER)).toBe(2)
+  expect(saved.get('notes:/projetos/site')).toMatchObject([{ text: 'trocar logo', color: 'laranja' }])
+  expect(saved.get('colorCounter:/projetos/site')).toBe(1)
+})
+
+test('mudar de pasta no meio da sessão não troca de quadro', async ($, on) => {
+  let root = FOLDER
+  const saved = memoryStore(on, () => root)
+  mock.clock(on, { now: 0 })
+  on('command.register', ($, e) => ({ value: { command: e.name } }))
+  on('session.start', () => ({ cwd: FOLDER }))
+
+  await $.session.start({ cwd: FOLDER, surface: 'terminal', isInteractive: true })
+  root = '/projetos/site'
+
+  const ui = await $.ui.mount({
+    plugin: 'post-its',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'post-its',
+    props: PANE,
+  })
+  await ui.input({ key: 'new', text: 'revisar PR' })
+
+  expect(saved.get(NOTES)).toMatchObject([{ text: 'revisar PR' }])
+  expect(saved.get(COUNTER)).toBe(1)
+  expect(saved.has('notes:/projetos/site')).toBe(false)
 
   await ui.unmount()
 })
@@ -637,6 +707,8 @@ test('numa sessão nova reabre o painel e limpa o que sobrou das versões antiga
     widthColumns: 59,
     paneColumns: 75,
     widthDebug: [],
+    notes: [{ id: 'teste', text: 'do quadro único', createdAt: 0, doneAt: null, color: 'azul' }],
+    colorCounter: 5,
   })) {
     saved.set(key, value)
   }
