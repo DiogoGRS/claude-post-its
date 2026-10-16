@@ -9,7 +9,7 @@ Enquanto os agentes trabalham na conversa, o painel ao lado guarda a tarefa atua
 - Crie post-its de texto; cada um ganha uma cor (laranja, azul, amarelo, verde, ciano, roxo, em ciclo).
 - Subtarefas com checkbox dentro de cada post-it, editáveis (`(✎)`) e removíveis (`(✕)`).
 - Marque como concluído e consulte o histórico na aba **Concluídos**, com a data.
-- Os post-its ficam salvos entre sessões.
+- Cada pasta tem o seu quadro: abrindo o Claude Code em outra pasta, você vê outros post-its. Eles ficam salvos entre sessões.
 
 ## Instalar
 
@@ -33,7 +33,7 @@ Quem decide a largura da lateral é o Claude Code: 45% do terminal (até 90 colu
 
 ## Onde ficam os dados
 
-Os post-its ficam no store do plugin, em `~/.claude/plugins/store/`, fora deste repositório.
+Os post-its ficam no store do plugin, em `~/.claude/plugins/store/`, fora deste repositório, guardados pela pasta onde a sessão começou. Um `/cd` no meio da sessão não troca de quadro; a próxima sessão aberta na outra pasta mostra o quadro dela.
 
 ## Desenvolver
 
